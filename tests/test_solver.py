@@ -145,3 +145,89 @@ def test_shared_true_value_across_equations():
     assert res["status"] == "feasible"
     w = {x["concept"]: x["true_value"] for x in res["witness"]}
     assert w["t:A"] == 10
+
+
+# --------------------------------------------------------------------------
+# Amounts above 2**53 must not be merged or rounded.
+# --------------------------------------------------------------------------
+BIG = 9007199254740993      # 2**53 + 1; float(BIG) == float(BIG-1)
+BIG_LOW = 9007199254740992  # 2**53
+
+
+def test_distinct_inf_amounts_above_two_pow_53_are_not_equal():
+    # 9007199254740993 == 9007199254740992 must be infeasible.
+    facts = [
+        _fact("t:A", BIG, "INF", BIG, BIG),
+        _fact("t:B", BIG_LOW, "INF", BIG_LOW, BIG_LOW),
+    ]
+    res = check_facts(facts, [_eq("t:A", [("t:B", 1)])])
+    assert res["status"] == "infeasible"
+    conflict = res["conflicts"][0]
+    assert conflict["residual_at_witness"] == -1
+    # the witness amounts are reported exactly, not as a collapsed float
+    reported = {f["concept"]: f["reported_value"] for f in conflict["facts"]}
+    assert reported["t:A"] == BIG
+    assert reported["t:B"] == BIG_LOW
+
+
+def test_equal_inf_amounts_above_two_pow_53_are_feasible():
+    facts = [
+        _fact("t:A", BIG, "INF", BIG, BIG),
+        _fact("t:B", BIG, "INF", BIG, BIG),
+    ]
+    res = check_facts(facts, [_eq("t:A", [("t:B", 1)])])
+    assert res["status"] == "feasible"
+    witness = {row["concept"]: row["true_value"] for row in res["witness"]}
+    assert witness["t:A"] == BIG
+
+
+def test_large_decimals_zero_uses_exact_half_unit_bounds():
+    # Amounts above 2**53 with decimals=0: the true values are x ± 0.5.
+    # A = B is feasible exactly when the closed intervals touch, which the
+    # binary floats would collapse to a single point.
+    facts = [
+        _fact("t:A", BIG, 0, "9007199254740992.5", "9007199254740993.5"),
+        _fact("t:B", BIG_LOW, 0, "9007199254740991.5", "9007199254740992.5"),
+    ]
+    res = check_facts(facts, [_eq("t:A", [("t:B", 1)])])
+    assert res["status"] == "feasible"
+    witness = {row["concept"]: row["true_value"] for row in res["witness"]}
+    # the only common true value is the shared interval boundary
+    assert witness["t:A"] == witness["t:B"] == "9007199254740992.5"
+
+    # shifting B up by two makes the closed intervals disjoint
+    facts[1] = _fact("t:B", BIG, 0, "9007199254740992.5", "9007199254740993.5")
+    # ...which is still feasible: they share the upper boundary
+    assert check_facts(facts, [_eq("t:A", [("t:B", 1)])])["status"] == "feasible"
+    facts[1] = _fact(
+        "t:B", BIG + 2, 0, "9007199254740993.5", "9007199254740994.5"
+    )
+    assert check_facts(facts, [_eq("t:A", [("t:B", 1)])])["status"] == "feasible"
+    facts[1] = _fact(
+        "t:B", BIG + 4, 0, "9007199254740994.5", "9007199254740995.5"
+    )
+    assert check_facts(facts, [_eq("t:A", [("t:B", 1)])])["status"] == "infeasible"
+
+
+def test_feasible_witness_is_exactly_inside_original_intervals():
+    # 1/3-like rational corners must be reported without pretending to be floats.
+    facts = [
+        _fact("t:A", 1, 0, "0.5", "1.5"),
+        _fact("t:B", 1, 0, "0.5", "1.5"),
+        _fact("t:S", 2, 0, "1.5", "2.5"),
+    ]
+    res = check_facts(facts, [_eq("t:S", [("t:A", 1), ("t:B", 1)])])
+    assert res["status"] == "feasible"
+    from fractions import Fraction
+
+    from app.amounts import to_fraction
+    assert all(
+        to_fraction(row["lower"]) <= to_fraction(row["true_value"])
+        <= to_fraction(row["upper"])
+        for row in res["witness"]
+    )
+    witness = {row["concept"]: to_fraction(row["true_value"])
+               for row in res["witness"]}
+    assert witness["t:S"] - witness["t:A"] - witness["t:B"] == 0
+    assert res["max_abs_residual"] == 0
+

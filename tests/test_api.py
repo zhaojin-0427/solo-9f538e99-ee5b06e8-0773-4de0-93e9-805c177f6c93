@@ -163,6 +163,121 @@ def test_late_report_kept_as_history_only(client, samples):
     assert client.get(f"/reports/{late['report_id']}").json()["late"] is True
 
 
+def test_large_exact_amounts_decide_correctly(client, samples):
+    """9007199254740993 and 9007199254740992 must not be treated as equal."""
+    pkg = create_package(client, samples)
+    inst = create_instance(client, pkg["package_id"], samples["large_inf"])
+    report = check(client, inst["instance_id"], 1, 1).json()["report"]
+
+    assert report["status"] == "infeasible"
+    assert report["witness"] is None
+    conflicts = report["conflicts"]
+    assert conflicts
+    # the contradictory Assets = CurrentAssets + NonCurrentAssets relation
+    eq1 = next(c for c in conflicts if c["equation"]["summation"] == "acct:Assets")
+    facts = {f["concept"]: f["reported_value"] for f in eq1["facts"]}
+    assert facts["acct:Assets"] == 9007199254740993
+    assert facts["acct:CurrentAssets"] == 9007199254740992
+    assert eq1["residual_at_witness"] == -1
+
+    # the exact amounts survive storage and retrieval unchanged
+    stored = client.get(f"/instances/{inst['instance_id']}").json()
+    values = {f["concept"]: f["value"] for f in stored["latest"]["facts"]}
+    assert values["acct:Assets"] == 9007199254740993
+    assert values["acct:CurrentAssets"] == 9007199254740992
+
+
+def test_large_amounts_with_rounding_have_exact_witness(client, samples):
+    pkg = create_package(client, samples)
+    inst = create_instance(client, pkg["package_id"], samples["large_rounding"])
+    r = check(client, inst["instance_id"], 1, 1)
+    assert r.status_code == 200
+    report = r.json()["report"]
+    assert report["status"] == "feasible"
+
+    from fractions import Fraction
+
+    from app.amounts import to_fraction
+
+    witness = {w["concept"]: w for w in report["witness"]}
+    for w in report["witness"]:
+        assert to_fraction(w["lower"]) <= to_fraction(w["true_value"])
+        assert to_fraction(w["true_value"]) <= to_fraction(w["upper"])
+    for eq in pkg["latest"]["equations"]:
+        residual = sum(
+            Fraction(coef) * to_fraction(witness[c]["true_value"])
+            for c, coef in eq["coefficients"].items()
+        )
+        assert residual == 0
+    # the half-unit witness is preserved exactly, not collapsed by float()
+    assert witness["acct:Assets"]["true_value"] == "9007199254740992.5"
+
+
+def test_check_uses_raw_snapshot_not_legacy_cached_floats(client, samples):
+    """A revision stored with lossy cached facts is still decided exactly.
+
+    Simulates an existing row written by the old float-based pipeline: the
+    cached JSON says both INF amounts are 9007199254740992, but the immutable
+    raw instance keeps 9007199254740993.  The check must follow the raw XML.
+    """
+    import json
+
+    from app import db
+
+    pkg = create_package(client, samples)
+    inst = create_instance(client, pkg["package_id"], samples["large_inf"])
+    conn = db.get_conn()
+    row = conn.execute(
+        "SELECT facts_json FROM instance_revisions WHERE instance_id=?",
+        (inst["instance_id"],),
+    ).fetchone()
+    legacy = json.loads(row["facts_json"])
+    for fact in legacy:  # the old pipeline collapsed both amounts to 2**53
+        if fact["concept"] == "acct:Assets":
+            fact.update(value=9007199254740992, lower=9007199254740992,
+                        upper=9007199254740992)
+    with conn:
+        conn.execute(
+            "UPDATE instance_revisions SET facts_json=? WHERE instance_id=?",
+            (json.dumps(legacy), inst["instance_id"]),
+        )
+
+    report = check(client, inst["instance_id"], 1, 1).json()["report"]
+    assert report["status"] == "infeasible"
+    eq1 = next(c for c in report["conflicts"]
+               if c["equation"]["summation"] == "acct:Assets")
+    facts = {f["concept"]: f["reported_value"] for f in eq1["facts"]}
+    assert facts["acct:Assets"] == 9007199254740993
+
+
+def test_solver_failure_publishes_no_report(client, samples, monkeypatch):
+    from app import storage
+    from app.errors import ApiError
+
+    pkg = create_package(client, samples)
+    inst = create_instance(client, pkg["package_id"], samples["feasible"])
+    first = check(client, inst["instance_id"], 1, 1).json()["report"]
+    first_snapshot = client.get(
+        f"/reports/{first['report_id']}/snapshots/instance"
+    ).content
+
+    def exploding_check(_facts, _equations):
+        raise ApiError(500, "solver_error", "exact solver failed")
+
+    monkeypatch.setattr(storage, "check_facts", exploding_check)
+    r = check(client, inst["instance_id"], 1, 1)
+    assert r.status_code == 500
+    assert r.json()["error"]["code"] == "solver_error"
+
+    # no new report was published, and the existing history was not touched
+    listing = client.get(f"/instances/{inst['instance_id']}/reports").json()
+    assert len(listing["history"]) == 1
+    assert listing["current"]["report_id"] == first["report_id"]
+    assert listing["current"]["superseded"] is False
+    assert client.get(f"/reports/{first['report_id']}/snapshots/instance").content \
+        == first_snapshot
+
+
 def test_report_persists_all_three_sources(client, samples):
     pkg = create_package(client, samples)
     inst = create_instance(client, pkg["package_id"], samples["feasible"])

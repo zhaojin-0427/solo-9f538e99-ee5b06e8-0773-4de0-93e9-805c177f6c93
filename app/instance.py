@@ -6,6 +6,7 @@ from decimal import Decimal
 from lxml import etree
 
 from . import config
+from .amounts import amount_out, decimals_interval, to_fraction
 from .errors import BadPayload
 
 XBRLI = "http://www.xbrl.org/2003/instance"
@@ -21,14 +22,6 @@ def _parse_xml(data: bytes) -> etree._Element:
         return etree.fromstring(data)
     except etree.XMLSyntaxError as exc:
         raise BadPayload(f"XBRL instance is not well-formed XML: {exc.msg}") from exc
-
-
-def _decimals_interval(value: Decimal, decimals: object) -> tuple[Decimal, Decimal]:
-    """Closed true-value interval for a fact with the given decimals."""
-    if decimals == "INF":
-        return value, value
-    half = Decimal(1).scaleb(-int(decimals)) / 2
-    return value - half, value + half
 
 
 def parse_instance(data: bytes, package_info: dict) -> dict:
@@ -154,19 +147,41 @@ def parse_instance(data: bytes, package_info: dict) -> dict:
             raise BadPayload(f"fact '{fq.localname}' value '{text}' is not numeric")
         if not value.is_finite():
             raise BadPayload(f"fact '{fq.localname}' value must be finite")
+        if value.is_zero():
+            value = Decimal(0)  # normalise -0 / 0.000 without losing exactness
+        sign, digits, exponent = value.as_tuple()
+        # Bound the *rendered* magnitude, not just the coefficient, so exact
+        # Fraction/integer conversion and JSON serialization stay cheap and do
+        # not trip Python's integer-string digit limit.
+        magnitude = exponent + len(digits)
+        if (len(digits) > config.MAX_AMOUNT_DIGITS
+                or abs(magnitude) > config.MAX_AMOUNT_DIGITS
+                or abs(exponent) > config.MAX_AMOUNT_DIGITS):
+            raise BadPayload(
+                f"fact '{fq.localname}' amount is too large to check exactly"
+            )
+        if isinstance(decimals, int) and abs(decimals) > config.MAX_DECIMALS_ABS:
+            raise BadPayload(
+                f"fact '{fq.localname}' decimals magnitude exceeds "
+                f"{config.MAX_DECIMALS_ABS}"
+            )
 
         concept = f"{prefix}:{fq.localname}"
         if concept in seen_concepts:
             raise BadPayload(f"duplicate numeric fact for concept '{concept}'")
         seen_concepts.add(concept)
 
-        lower, upper = _decimals_interval(value, decimals)
+        # Keep the amount exact: ``Decimal``/``Fraction`` preserve every digit,
+        # whereas ``float`` would merge distinct INF amounts above 2**53 and
+        # lose the half-unit bound for large ``decimals=0`` values.
+        exact_value = to_fraction(value)
+        lower, upper = decimals_interval(exact_value, decimals)
         facts.append({
             "concept": concept,
-            "value": float(value),
+            "value": amount_out(exact_value),
             "decimals": decimals,
-            "lower": float(lower),
-            "upper": float(upper),
+            "lower": amount_out(lower),
+            "upper": amount_out(upper),
         })
 
     if not facts:

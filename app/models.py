@@ -1,9 +1,14 @@
 """Pydantic response / request models."""
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
+
+# Exact monetary amount.  Integers keep every digit in JSON; values whose exact
+# decimal literal cannot round-trip through a binary float (or non-terminating
+# rational witnesses) are emitted as decimal / ``"p/q"`` strings.
+Amount = Union[int, float, str]
 
 
 class ErrorBody(BaseModel):
@@ -44,10 +49,10 @@ class PackageOut(BaseModel):
 
 class Fact(BaseModel):
     concept: str
-    value: float
+    value: Amount
     decimals: object  # int or the string "INF"
-    lower: float
-    upper: float
+    lower: Amount
+    upper: Amount
 
 
 class InstanceRevisionOut(BaseModel):
@@ -72,16 +77,16 @@ class InstanceOut(BaseModel):
 
 class WitnessFact(BaseModel):
     concept: str
-    reported_value: float
+    reported_value: Amount
     decimals: object
-    true_value: float
-    lower: float
-    upper: float
+    true_value: Amount
+    lower: Amount
+    upper: Amount
 
 
 class Conflict(BaseModel):
     equation: Equation
-    residual_at_witness: Optional[float] = None
+    residual_at_witness: Optional[Amount] = None
     facts: list[WitnessFact]
 
 

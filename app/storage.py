@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from . import db
-from .errors import NotFound, StaleRevision
+from .errors import ApiError, NotFound, StaleRevision
 from .instance import parse_instance
 from .solver import check_facts
 from .taxonomy import parse_package
@@ -210,6 +210,24 @@ def list_instances(pid: str | None = None) -> list[dict]:
 
 
 # ---------------------------------------------------------------- reports
+def _exact_facts_for_revision(i_rev: dict, p_rev: dict) -> list[dict]:
+    """Recover exact decimal facts from the immutable raw instance snapshot.
+
+    ``facts_json`` is a convenience cache; the original XML is the source of
+    truth (and is never overwritten).  Re-parsing it for every check means a
+    report is always decided from the original decimal amounts, even for
+    revisions stored before exact amounts were kept in the JSON column.
+    """
+    try:
+        package_info = parse_package(
+            bytes(p_rev["xsd_raw"]), bytes(p_rev["calc_raw"])
+        )
+        return parse_instance(bytes(i_rev["instance_raw"]), package_info)["facts"]
+    except (KeyError, TypeError, ValueError, ApiError):
+        # Fall back to the cached facts if the snapshot cannot be re-parsed.
+        return json.loads(i_rev["facts_json"])
+
+
 def _report_out(row: dict) -> dict:
     return {
         "report_id": row["id"],
@@ -269,7 +287,7 @@ def run_check(iid: str, expected_instance_revision: int,
 
     # 迟到报告：依据的修订已落后于两侧最新组合，仅存历史，不取代当前报告。
     is_late = behind
-    facts = json.loads(i_rev["facts_json"])
+    facts = _exact_facts_for_revision(i_rev, p_rev)
     equations = json.loads(p_rev["equations_json"])
 
     result = check_facts(facts, equations)
@@ -287,7 +305,8 @@ def run_check(iid: str, expected_instance_revision: int,
         "currency": i_rev["currency"],
         "fact_count": len(facts),
         "equation_count": len(equations),
-        "solver": "scipy.optimize.linprog(highs)",
+        "solver": "exact rational simplex (fractions.Fraction)",
+        "amount_representation": "exact decimal; binary floats are never used for decisions",
     }
     payload = {
         "id": report_id,

@@ -43,6 +43,8 @@ def samples():
         "rounding": (base / "instance-rounding.xml").read_bytes(),
         "infeasible": (base / "instance-infeasible.xml").read_bytes(),
         "pending": (base / "instance-pending.xml").read_bytes(),
+        "large_inf": (base / "instance-large-inf.xml").read_bytes(),
+        "large_rounding": (base / "instance-large-rounding.xml").read_bytes(),
     }
 
 

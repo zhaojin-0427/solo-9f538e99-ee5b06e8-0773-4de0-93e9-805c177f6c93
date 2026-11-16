@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrli:xbrl xmlns:acct="http://example.com/acct"
+            xmlns:xbrli="http://www.xbrl.org/2003/instance"
+            xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+  <link:schemaRef xmlns:link="http://www.xbrl.org/2003/linkbase"
+                  xlink:type="simple"
+                  xlink:href="acct.xsd"
+                  xlink:title="acct"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"/>
+  <xbrli:context id="ctx1">
+    <xbrli:entity><xbrli:identifier scheme="http://example.com/ids">E-001</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <xbrli:unit id="usd"><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unit>
+
+  <!-- Two distinct decimals=INF amounts differ by exactly 1, so Assets =
+       CurrentAssets + NonCurrentAssets cannot hold.  Both amounts are above
+       2**53; a binary-float implementation considers them equal and wrongly
+       reports the filing as feasible. -->
+  <acct:Assets contextRef="ctx1" unitRef="usd" decimals="INF">9007199254740993</acct:Assets>
+  <acct:CurrentAssets contextRef="ctx1" unitRef="usd" decimals="INF">9007199254740992</acct:CurrentAssets>
+  <acct:NonCurrentAssets contextRef="ctx1" unitRef="usd" decimals="INF">0</acct:NonCurrentAssets>
+  <acct:Cash contextRef="ctx1" unitRef="usd" decimals="INF">9007199254740992</acct:Cash>
+  <acct:Receivables contextRef="ctx1" unitRef="usd" decimals="INF">0</acct:Receivables>
+  <acct:Inventory contextRef="ctx1" unitRef="usd" decimals="INF">0</acct:Inventory>
+  <acct:Revenues contextRef="ctx1" unitRef="usd" decimals="INF">0</acct:Revenues>
+  <acct:Expenses contextRef="ctx1" unitRef="usd" decimals="INF">0</acct:Expenses>
+  <acct:NetIncome contextRef="ctx1" unitRef="usd" decimals="INF">0</acct:NetIncome>
+</xbrli:xbrl>

@@ -11,9 +11,15 @@ DB_PATH = Path(os.environ.get("XRECON_DB_PATH", str(DATA_DIR / "xrecon.db")))
 MAX_FACTS = 30
 MAX_EQUATIONS = 30
 
-# Tolerance used when verifying a witness against the closed rounding intervals
-# and the (weighted) summation equations.
-WITNESS_TOL = 1e-9
+# Defensive bounds so exact rational arithmetic cannot be driven to huge
+# integers by a hostile instance.  Real filings stay many orders of magnitude
+# inside these limits.  The bound also keeps every derived amount well below
+# Python's default 4300-digit int/str conversion limit.
+MAX_AMOUNT_DIGITS = 2000     # significant digits / decimal magnitude
+MAX_DECIMALS_ABS = 2000      # |decimals| for a fact
+
+# Verification is exact (rational arithmetic), so no floating-point tolerance is
+# applied when checking a witness against its intervals or the equations.
 
 
 def ensure_dirs() -> None:

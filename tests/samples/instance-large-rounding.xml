@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrli:xbrl xmlns:acct="http://example.com/acct"
+            xmlns:xbrli="http://www.xbrl.org/2003/instance"
+            xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+  <link:schemaRef xmlns:link="http://www.xbrl.org/2003/linkbase"
+                  xlink:type="simple"
+                  xlink:href="acct.xsd"
+                  xlink:title="acct"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"/>
+  <xbrli:context id="ctx1">
+    <xbrli:entity><xbrli:identifier scheme="http://example.com/ids">E-001</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <xbrli:unit id="usd"><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unit>
+
+  <!-- Large amounts with decimals=0.  The half-unit bounds around 2**53 are
+       not representable as binary floats (both collapse to 2**53), while the
+       exact closed intervals still admit a common true-value vector:
+       Assets 2**53+0.5 = CurrentAssets 2**53-0.5 + NonCurrentAssets 1.  A
+       float-only solver wrongly reports this filing as infeasible. -->
+  <acct:Assets contextRef="ctx1" unitRef="usd" decimals="0">9007199254740992</acct:Assets>
+  <acct:CurrentAssets contextRef="ctx1" unitRef="usd" decimals="0">9007199254740992</acct:CurrentAssets>
+  <acct:NonCurrentAssets contextRef="ctx1" unitRef="usd" decimals="0">1</acct:NonCurrentAssets>
+  <acct:Cash contextRef="ctx1" unitRef="usd" decimals="0">9007199254740992</acct:Cash>
+  <acct:Receivables contextRef="ctx1" unitRef="usd" decimals="0">0</acct:Receivables>
+  <acct:Inventory contextRef="ctx1" unitRef="usd" decimals="0">0</acct:Inventory>
+  <acct:Revenues contextRef="ctx1" unitRef="usd" decimals="0">0</acct:Revenues>
+  <acct:Expenses contextRef="ctx1" unitRef="usd" decimals="0">0</acct:Expenses>
+  <acct:NetIncome contextRef="ctx1" unitRef="usd" decimals="0">0</acct:NetIncome>
+</xbrli:xbrl>

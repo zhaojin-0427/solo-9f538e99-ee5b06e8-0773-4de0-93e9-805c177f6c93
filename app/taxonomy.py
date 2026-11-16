@@ -1,6 +1,8 @@
 """Parsing and validation of taxonomy packages (XSD + calculation linkbase)."""
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
+
 from lxml import etree
 
 from . import config
@@ -87,7 +89,7 @@ def parse_calculation(data: bytes, xsd_info: dict) -> dict:
     for link_el in root.iter(f"{{{CALC}}}calculationLink"):
         role = link_el.get(f"{{{XLINK}}}role", CALC_LINK_ROLE)
         # summation label -> ordered (item label, weight) pairs
-        groups: dict[str, list[tuple[str, float]]] = {}
+        groups: dict[str, list[tuple[str, int]]] = {}
         for arc in link_el.iter(f"{{{CALC}}}calculationArc"):
             arcrole = arc.get(f"{{{XLINK}}}arcrole")
             if arcrole is not None and arcrole != SUMMATION_ITEM_ARCROLE:
@@ -97,12 +99,12 @@ def parse_calculation(data: bytes, xsd_info: dict) -> dict:
             if frm not in labels or to not in labels:
                 raise BadPayload("calculationArc xlink:from/xlink:to must resolve to link:loc labels")
             try:
-                weight = float(arc.get("weight", ""))
-            except (TypeError, ValueError):
+                weight = Decimal(arc.get("weight", ""))
+            except (TypeError, ValueError, InvalidOperation):
                 raise BadPayload("calculationArc must carry a numeric weight")
-            if weight not in (1.0, -1.0):
+            if not weight.is_finite() or weight not in (Decimal(1), Decimal(-1)):
                 raise BadPayload(f"weight {weight} not allowed; only +1 and -1 are supported")
-            groups.setdefault(frm, []).append((to, weight))
+            groups.setdefault(frm, []).append((to, int(weight)))
 
         for summ_label, arcs in groups.items():
             summation = labels[summ_label]
@@ -116,9 +118,8 @@ def parse_calculation(data: bytes, xsd_info: dict) -> dict:
                 if local in seen:
                     raise BadPayload(f"concept '{local}' appears twice in one calculation equation")
                 seen.add(local)
-                w = int(weight)
-                items.append({"concept": q(local), "weight": w})
-                coefficients[q(local)] = coefficients.get(q(local), 0) + w
+                items.append({"concept": q(local), "weight": weight})
+                coefficients[q(local)] = coefficients.get(q(local), 0) + weight
             equations.append({
                 "id": f"eq{len(equations) + 1}",
                 "role": role,
