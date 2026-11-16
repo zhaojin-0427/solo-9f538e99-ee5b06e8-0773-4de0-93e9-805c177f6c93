@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrli:xbrl xmlns:acct="http://example.com/acct"
+            xmlns:xbrli="http://www.xbrl.org/2003/instance"
+            xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+  <link:schemaRef xmlns:link="http://www.xbrl.org/2003/linkbase"
+                  xlink:type="simple"
+                  xlink:href="acct.xsd"
+                  xlink:title="acct"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"/>
+  <xbrli:context id="ctx1">
+    <xbrli:entity><xbrli:identifier scheme="http://example.com/ids">E-001</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <xbrli:unit id="usd"><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unit>
+
+  <!-- Rounded amounts: 100.4+60.3+40.2=200.9 ~= 201; the half-unit closed
+       intervals still admit a common exact solution, so this is feasible. -->
+  <acct:Cash contextRef="ctx1" unitRef="usd" decimals="0">100</acct:Cash>
+  <acct:Receivables contextRef="ctx1" unitRef="usd" decimals="0">60</acct:Receivables>
+  <acct:Inventory contextRef="ctx1" unitRef="usd" decimals="0">40</acct:Inventory>
+  <acct:CurrentAssets contextRef="ctx1" unitRef="usd" decimals="0">201</acct:CurrentAssets>
+  <acct:NonCurrentAssets contextRef="ctx1" unitRef="usd" decimals="0">300</acct:NonCurrentAssets>
+  <acct:Assets contextRef="ctx1" unitRef="usd" decimals="0">501</acct:Assets>
+  <acct:Revenues contextRef="ctx1" unitRef="usd" decimals="2">800.00</acct:Revenues>
+  <acct:Expenses contextRef="ctx1" unitRef="usd" decimals="2">500.00</acct:Expenses>
+  <acct:NetIncome contextRef="ctx1" unitRef="usd" decimals="2">300.00</acct:NetIncome>
+</xbrli:xbrl>

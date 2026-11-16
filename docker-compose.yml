@@ -1,0 +1,17 @@
+services:
+  xrecon:
+    build: .
+    image: xrecon:latest
+    container_name: xrecon
+    ports:
+      - "8000:8000"
+    environment:
+      XRECON_DATA_DIR: /data
+      XRECON_DB_PATH: /data/xrecon.db
+      XRECON_SEED_SAMPLES: "1"
+    volumes:
+      - xrecon-data:/data
+    restart: unless-stopped
+
+volumes:
+  xrecon-data:

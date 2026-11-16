@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:acct="http://example.com/acct"
+           targetNamespace="http://example.com/acct"
+           elementFormDefault="qualified">
+  <xs:element name="Assets" id="acct_Assets" type="xs:decimal" abstract="false"/>
+  <xs:element name="CurrentAssets" id="acct_CurrentAssets" type="xs:decimal" abstract="false"/>
+  <xs:element name="NonCurrentAssets" id="acct_NonCurrentAssets" type="xs:decimal" abstract="false"/>
+  <xs:element name="Cash" id="acct_Cash" type="xs:decimal" abstract="false"/>
+  <xs:element name="Receivables" id="acct_Receivables" type="xs:decimal" abstract="false"/>
+  <xs:element name="Inventory" id="acct_Inventory" type="xs:decimal" abstract="false"/>
+  <xs:element name="Liabilities" id="acct_Liabilities" type="xs:decimal" abstract="false"/>
+  <xs:element name="Equity" id="acct_Equity" type="xs:decimal" abstract="false"/>
+  <xs:element name="Revenues" id="acct_Revenues" type="xs:decimal" abstract="false"/>
+  <xs:element name="Expenses" id="acct_Expenses" type="xs:decimal" abstract="false"/>
+  <xs:element name="NetIncome" id="acct_NetIncome" type="xs:decimal" abstract="false"/>
+</xs:schema>

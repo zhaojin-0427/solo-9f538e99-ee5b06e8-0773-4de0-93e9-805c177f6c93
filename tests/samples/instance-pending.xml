@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xbrli:xbrl xmlns:acct="http://example.com/acct"
+            xmlns:xbrli="http://www.xbrl.org/2003/instance"
+            xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+  <link:schemaRef xmlns:link="http://www.xbrl.org/2003/linkbase"
+                  xlink:type="simple"
+                  xlink:href="acct.xsd"
+                  xlink:title="acct"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"/>
+  <xbrli:context id="ctx1">
+    <xbrli:entity><xbrli:identifier scheme="http://example.com/ids">E-001</xbrli:identifier></xbrli:entity>
+    <xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period>
+  </xbrli:context>
+  <xbrli:unit id="usd"><xbrli:measure>iso4217:USD</xbrli:measure></xbrli:unit>
+
+  <!-- Inventory and NetIncome are missing: every referenced fact must exist
+       or the whole filing is pending. -->
+  <acct:Cash contextRef="ctx1" unitRef="usd" decimals="0">100</acct:Cash>
+  <acct:Receivables contextRef="ctx1" unitRef="usd" decimals="0">60</acct:Receivables>
+  <acct:CurrentAssets contextRef="ctx1" unitRef="usd" decimals="0">200</acct:CurrentAssets>
+  <acct:NonCurrentAssets contextRef="ctx1" unitRef="usd" decimals="0">300</acct:NonCurrentAssets>
+  <acct:Assets contextRef="ctx1" unitRef="usd" decimals="0">500</acct:Assets>
+  <acct:Revenues contextRef="ctx1" unitRef="usd" decimals="0">800</acct:Revenues>
+  <acct:Expenses contextRef="ctx1" unitRef="usd" decimals="0">500</acct:Expenses>
+</xbrli:xbrl>

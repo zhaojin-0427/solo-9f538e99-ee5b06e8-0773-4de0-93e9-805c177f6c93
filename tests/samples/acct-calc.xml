@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<link:linkbase xmlns:link="http://www.xbrl.org/2003/linkbase"
+               xmlns:xlink="http://www.w3.org/1999/xlink"
+               xmlns:calc="http://www.xbrl.org/2003/calculationLinkbase"
+               xmlns:acct="http://example.com/acct">
+  <link:labelLink xlink:type="extended" xlink:role="http://www.xbrl.org/2003/role/link"/>
+
+  <calc:calculationLink xlink:type="extended"
+                        xlink:role="http://www.xbrl.org/2003/role/link">
+    <!-- Assets = CurrentAssets + NonCurrentAssets -->
+    <link:loc xlink:type="locator" xlink:label="loc_Assets"
+              xlink:href="acct.xsd#Assets"/>
+    <link:loc xlink:type="locator" xlink:label="loc_CurrentAssets"
+              xlink:href="acct.xsd#CurrentAssets"/>
+    <link:loc xlink:type="locator" xlink:label="loc_NonCurrentAssets"
+              xlink:href="acct.xsd#NonCurrentAssets"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_Assets" xlink:to="loc_CurrentAssets"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="1.0"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_Assets" xlink:to="loc_NonCurrentAssets"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="1.0"/>
+
+    <!-- CurrentAssets = Cash + Receivables + Inventory -->
+    <link:loc xlink:type="locator" xlink:label="loc_Cash"
+              xlink:href="acct.xsd#Cash"/>
+    <link:loc xlink:type="locator" xlink:label="loc_Receivables"
+              xlink:href="acct.xsd#Receivables"/>
+    <link:loc xlink:type="locator" xlink:label="loc_Inventory"
+              xlink:href="acct.xsd#Inventory"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_CurrentAssets" xlink:to="loc_Cash"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="1.0"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_CurrentAssets" xlink:to="loc_Receivables"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="1.0"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_CurrentAssets" xlink:to="loc_Inventory"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="1.0"/>
+
+    <!-- NetIncome = Revenues - Expenses -->
+    <link:loc xlink:type="locator" xlink:label="loc_NetIncome"
+              xlink:href="acct.xsd#NetIncome"/>
+    <link:loc xlink:type="locator" xlink:label="loc_Revenues"
+              xlink:href="acct.xsd#Revenues"/>
+    <link:loc xlink:type="locator" xlink:label="loc_Expenses"
+              xlink:href="acct.xsd#Expenses"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_NetIncome" xlink:to="loc_Revenues"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="1.0"/>
+    <calc:calculationArc xlink:type="arc"
+                         xlink:from="loc_NetIncome" xlink:to="loc_Expenses"
+                         xlink:arcrole="http://www.xbrl.org/2003/arcrole/summation-item"
+                         weight="-1.0"/>
+  </calc:calculationLink>
+</link:linkbase>
